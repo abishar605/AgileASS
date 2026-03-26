@@ -1,0 +1,223 @@
+🔰 FIRST: What you are doing (simple idea)
+
+You are creating a system that:
+
+Write a simple webpage
+Put it inside Docker
+Push to DockerHub
+Automatically deploy in Kubernetes using Jenkins
+🧩 STEP 1: Create Project Folder
+
+👉 On your system:
+
+Create a folder:
+html-demo
+Open this folder in:
+VS Code (recommended)
+🌐 STEP 2: Create index.html
+
+Inside the folder:
+
+Right click → New File → index.html
+Paste this:
+<!DOCTYPE html>
+<html>
+<head>
+<title>CI/CD Demo</title>
+<style>
+body{
+text-align:center;
+font-family:Times New Roman;
+background-color:#af0d0d;
+}
+h1{
+color:#0ef777;
+}
+</style>
+</head>
+<body>
+<h1>CI/CD Pipeline Working</h1>
+<h2>Deployed using Jenkins + Docker + Kubernetes</h2>
+<p>This webpage is automatically deployed using a CI/CD pipeline.</p>
+</body>
+</html>
+
+✅ Save it
+
+🐳 STEP 3: Create Dockerfile
+Create new file → Dockerfile (no extension)
+Paste:
+FROM nginx:latest
+COPY index.html /usr/share/nginx/html/index.html
+EXPOSE 80
+
+✅ This means:
+
+Use nginx server
+Copy your HTML
+Run on port 80
+☸️ STEP 4: Create deployment.yaml
+Create file → deployment.yaml
+Paste:
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: html-demo
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: html-demo
+  template:
+    metadata:
+      labels:
+        app: html-demo
+    spec:
+      containers:
+      - name: html-demo
+        image: YOUR_DOCKERHUB_USERNAME/html-demo:latest
+        ports:
+        - containerPort: 80
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: html-demo-service
+spec:
+  type: NodePort
+  selector:
+    app: html-demo
+  ports:
+  - port: 80
+    targetPort: 80
+    nodePort: 30010
+
+👉 Replace:
+
+YOUR_DOCKERHUB_USERNAME
+🐙 STEP 5: Upload to GitHub
+Go to GitHub → Create new repository
+Name: html-demo
+
+Then in terminal:
+
+git init
+git add .
+git commit -m "first commit"
+git branch -M main
+git remote add origin https://github.com/YOUR_USERNAME/html-demo.git
+git push -u origin main
+🐳 STEP 6: DockerHub Setup
+Go to DockerHub
+Create account
+Create repository:
+html-demo
+⚙️ STEP 7: Jenkins Setup
+
+👉 Open Jenkins in browser:
+
+http://localhost:8080
+➤ Install Plugins:
+Docker Pipeline
+Kubernetes CLI
+Git
+➤ Add Credentials:
+Go → Manage Jenkins → Credentials
+
+Add:
+
+🔑 DockerHub:
+ID: dockerhub
+Username & Password
+🔑 Kubernetes config:
+ID: kuberconfig
+Upload kubeconfig file
+🔁 STEP 8: Create Pipeline in Jenkins
+Click → New Item
+Name: html-demo-pipeline
+Select → Pipeline
+Paste this Pipeline:
+pipeline {
+    agent any
+
+    environment {
+        DOCKER_IMAGE = "YOUR_DOCKERHUB_USERNAME/html-demo"
+    }
+
+    stages {
+
+        stage('Clone Code') {
+            steps {
+                git branch: 'main',
+                    url: 'https://github.com/YOUR_USERNAME/html-demo.git'
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                bat 'docker build -t %DOCKER_IMAGE% .'
+            }
+        }
+
+        stage('Push Image') {
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'dockerhub',
+                usernameVariable: 'USER', passwordVariable: 'PASS')]) {
+                    bat 'docker login -u %USER% -p %PASS%'
+                    bat 'docker push %DOCKER_IMAGE%'
+                }
+            }
+        }
+
+        stage('Deploy to Kubernetes') {
+            steps {
+                withCredentials([file(credentialsId: 'kuberconfig', variable: 'KUBECONFIG')]) {
+                    bat '''
+                    set KUBECONFIG=%KUBECONFIG%
+                    kubectl apply -f deployment.yaml --validate=false
+                    '''
+                }
+            }
+        }
+
+    }
+}
+
+👉 Replace:
+
+GitHub URL
+DockerHub username
+▶️ STEP 9: Run Pipeline
+Click → Build Now
+Watch stages:
+Clone ✅
+Build ✅
+Push ✅
+Deploy ✅
+🌍 STEP 10: Check Output
+
+Run in terminal:
+
+kubectl get services
+
+Find:
+
+NodePort = 30010
+
+Open browser:
+
+http://<your-ip>:30010
+
+🎉 Your webpage will show!
+
+💡 SIMPLE FLOW (REMEMBER THIS)
+HTML → Docker → GitHub → Jenkins → DockerHub → Kubernetes → Website
+❗ If you feel stuck
+
+Tell me:
+
+Which step you are in
+What error you get
+
+I’ll guide you step-by-step until it runs successfully 💯
